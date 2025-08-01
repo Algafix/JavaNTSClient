@@ -23,6 +23,11 @@ dependencies {
 
     // This dependency is used by the application.
     implementation(libs.guava)
+
+    // Aleix
+    implementation("org.cryptomator:siv-mode:1.6.1")
+    implementation("commons-net:commons-net:3.11.1")
+    implementation("org.conscrypt:conscrypt-openjdk-uber:2.5.2")
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
@@ -34,7 +39,7 @@ java {
 
 application {
     // Define the main class for the application.
-    mainClass = "javantsgithub.App"
+    mainClass = "NTSTime.java"
 }
 
 tasks.named<Test>("test") {
