@@ -23,7 +23,6 @@ public class NTSTime {
 
         try {
             NTSUDPClient client = new NTSUDPClient();
-            client.setVersion(4);
             InetAddress hostAddr = InetAddress.getByName(ntsConfig.host);
 
             TimeInfo info = client.getTime(hostAddr, ntsConfig);

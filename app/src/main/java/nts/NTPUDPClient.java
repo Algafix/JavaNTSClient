@@ -20,7 +20,6 @@ package nts;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
-import java.util.Arrays;
 
 import org.apache.commons.net.DatagramSocketClient;
 
