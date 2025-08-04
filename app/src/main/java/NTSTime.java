@@ -14,7 +14,7 @@ public class NTSTime {
     
     public static void main(String[] args) {
         
-        String host = "ntppool1.time.nl";
+        String host = "paris.time.system76.com";
         int port = 4460;
 
         NTSKEHandshake tlsHandshake = new NTSKEHandshake();

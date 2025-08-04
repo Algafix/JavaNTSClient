@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.cryptomator.siv.*;
+import org.cryptomator.siv.org.bouncycastle.util.Arrays;
 
 /**
  * Implements {@link NtpV3Packet} to convert Java objects to and from the Network Time Protocol (NTP) data message header format described in RFC-1305.
@@ -80,7 +81,7 @@ public class NtsV4Impl implements NtpV3Packet {
     public byte[] ntsv4_buf;
 
     public List<NTSExtensionField> extensionFields = new ArrayList<>();
-    public byte[] associatedData;
+    public int associatedDataLenght;
     public byte[] plaintext;
     public NTSExtensionField authAndEncEF;
 
@@ -154,12 +155,13 @@ public class NtsV4Impl implements NtpV3Packet {
     /**
      * Constructs all the possible variables that will be used for the authentication and encryption extension field.
      * This is done here to avoid unnecessary delays in the time measurement after timestamping of the request packet.
-     * This should be called after all the Extension Fields have been added to the packet.
+     * This should be called after all the Extension Fields and other parameters have been added to the packet.
      */
     public void prepareAuthAndEncEF() {
 
-        // Construct the NTSv4 packet and store it in associated data for authentication
-        associatedData = getNTSv4Packet();
+        // Construct the NTSv4 packet and store the associated data length
+        byte[] currentNTSv4Packet = getNTSv4Packet();
+        associatedDataLenght = currentNTSv4Packet.length;
 
         // Instantiate everything possible
         plaintext = "".getBytes();
@@ -167,9 +169,8 @@ public class NtsV4Impl implements NtpV3Packet {
         authAndEncEF = new NTSExtensionField(FieldType.NTS_AUTH_AND_ENC, authAndEncBody);
 
         // Allocate memory for the NTSv4 buffer including the Auth and Enc extension field
-        int ntsv4_buf_length = associatedData.length + authAndEncEF.getFieldLength();
-        ntsv4_buf = new byte[ntsv4_buf_length];
-        System.arraycopy(associatedData, 0, ntsv4_buf, 0, associatedData.length);
+        ntsv4_buf = new byte[associatedDataLenght + authAndEncEF.getFieldLength()];
+        System.arraycopy(currentNTSv4Packet, 0, ntsv4_buf, 0, associatedDataLenght);
     }
 
     /**
@@ -181,12 +182,12 @@ public class NtsV4Impl implements NtpV3Packet {
      * @param nonce  the nonce to be used for encryption
      */
     public void createAuthAndEncEF(byte[] ctrKey, byte[] macKey, byte[] nonce) {
-        byte[] ciphertext = AES_SIV.encrypt(ctrKey, macKey, plaintext, associatedData, nonce);
+        byte[] ciphertext = AES_SIV.encrypt(ctrKey, macKey, plaintext, Arrays.copyOfRange(ntsv4_buf, 0, associatedDataLenght), nonce);
         authAndEncEF.replaceBody(nonce, 4);
         authAndEncEF.replaceBody(ciphertext, 4 + nonce.length);
 
         extensionFields.add(authAndEncEF);  // For consistency purposes
-        System.arraycopy(authAndEncEF.toByteArray(), 0, ntsv4_buf, associatedData.length, authAndEncEF.getFieldLength());
+        System.arraycopy(authAndEncEF.toByteArray(), 0, ntsv4_buf, associatedDataLenght, authAndEncEF.getFieldLength());
     }
 
     /**
