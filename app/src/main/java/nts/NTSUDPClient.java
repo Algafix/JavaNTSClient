@@ -39,7 +39,6 @@ public final class NTSUDPClient extends DatagramSocketClient {
     private int version = NtpV3Packet.VERSION_4;
 
     private List<NTSPeer> peers = new ArrayList<>();
-    private NTSKEHandshake tlsHandshake = new NTSKEHandshake();
 
     private NTSPeer getNtsPeer(final InetAddress host) {
         for (NTSPeer peer : peers) {
@@ -54,11 +53,7 @@ public final class NTSUDPClient extends DatagramSocketClient {
         NTSPeer peer = getNtsPeer(host);
         if (peer == null) {
             peer = new NTSPeer(host.getHostAddress());
-            NTSConfig ntsConfig = tlsHandshake.doHandshake(peer.KEHost, peer.KEPort);
-            System.out.println("\n" + ntsConfig);
-            peer.ntsConfig = ntsConfig;
             peers.add(peer);
-            return ntsConfig;
         }
         return peer.ntsConfig;
     }

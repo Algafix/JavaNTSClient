@@ -17,6 +17,20 @@ public class NTSKEHandshake {
     public static byte[] AEAD_AES_SIV_CMAC_256 = {0x00, (byte) 0x0F};
     public static byte C2S_CONTEXT = 0x00;
     public static byte S2C_CONTEXT = 0x01;
+    private SSLSocketFactory factory;
+
+    public NTSKEHandshake() {
+        // Create a TLSv1.3 socket using Conscrypt to have access to exportKeyingMaterial
+        try {
+            Security.insertProviderAt(Conscrypt.newProvider(), 1);
+            SSLContext context = SSLContext.getInstance("TLSv1.3", "Conscrypt");
+            context.init(null, null, null);
+            factory = context.getSocketFactory();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+    }
 
     private static void printSession(SSLSession session) {
         try {
@@ -41,14 +55,6 @@ public class NTSKEHandshake {
     public NTSConfig doHandshake(String host, int port) {
 
         try {
-
-            // Create a TLSv1.3 socket using Conscrypt to have access to exportKeyingMaterial 
-            Security.insertProviderAt(Conscrypt.newProvider(), 1);
-            SSLContext context = SSLContext.getInstance("TLSv1.3", "Conscrypt");
-            context.init(null, null, null);
-            SSLSocketFactory factory = context.getSocketFactory();
-            //SSLSocketFactory factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
-            
             SSLSocket socket = (SSLSocket) factory.createSocket(host, port);
 
             // Must be TLSv1.3 and ALPN Offer "ntske/1"
@@ -58,7 +64,7 @@ public class NTSKEHandshake {
             socket.setSSLParameters(params);
 
             socket.startHandshake();
-            printSession(socket.getSession());
+            //printSession(socket.getSession());
 
             // Create NTSKE Client Message
             NTSKEMessage NtsKeClientMessage = new NTSKEMessage();
@@ -66,8 +72,8 @@ public class NTSKEHandshake {
             NtsKeClientMessage.addNTSKERecord(NTSKERecordFactory.getAEADAlgorithmNegotiationRecord(AEADAlgorithms.AEAD_AES_SIV_CMAC_256));
             NtsKeClientMessage.addNTSKERecord(NTSKERecordFactory.getEndOfMessageRecord());
 
-            System.out.println("\nNTSKE Client Message:");
-            System.out.println(NtsKeClientMessage);
+            //System.out.println("\nNTSKE Client Message:");
+            //System.out.println(NtsKeClientMessage);
 
             socket.getOutputStream().write(NtsKeClientMessage.toBytes());
             socket.getOutputStream().flush();
@@ -78,8 +84,8 @@ public class NTSKEHandshake {
 
             // Create NTSKE Response Message
             NTSKEMessage NTSKEResponseMessage = NTSKEMessage.parseNTSKERawMessage(response, bytesRead);
-            System.out.println("\nNTSKE Server Message:");
-            System.out.println(NTSKEResponseMessage);
+            //System.out.println("\nNTSKE Server Message:");
+            //System.out.println(NTSKEResponseMessage);
 
             // Derive client and server keys from TLS handshake
             byte[] context_c2s = getKeyExpansionContext(C2S_CONTEXT);
@@ -87,9 +93,6 @@ public class NTSKEHandshake {
 
             byte[] c2s_key = Conscrypt.exportKeyingMaterial(socket, LABEL, context_c2s, 32);
             byte[] s2c_key = Conscrypt.exportKeyingMaterial(socket, LABEL, context_s2c, 32);
-
-            // System.out.println("C2S Key: " + Arrays.toString(c2s_key));
-            // System.out.println("S2C Key: " + Arrays.toString(s2c_key));
             
             socket.close();
 
