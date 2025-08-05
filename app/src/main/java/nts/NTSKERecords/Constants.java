@@ -1,4 +1,4 @@
-package NTSKERecords;
+package nts.NTSKERecords;
 
 public class Constants {
     public enum NTSNextProtocols {

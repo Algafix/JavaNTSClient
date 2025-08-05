@@ -1,14 +1,13 @@
 package nts;
 
 import java.security.Security;
-import java.util.Arrays;
 
 import javax.net.ssl.*;
 import org.conscrypt.Conscrypt;
 
-import NTSKERecords.NTSKERecordFactory;
-import NTSKERecords.Constants.NTSNextProtocols;
-import NTSKERecords.Constants.AEADAlgorithms;
+import nts.NTSKERecords.Constants.AEADAlgorithms;
+import nts.NTSKERecords.Constants.NTSNextProtocols;
+import nts.NTSKERecords.NTSKERecordFactory;
 
 
 public class NTSKEHandshake {

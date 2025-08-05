@@ -2,8 +2,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.NumberFormat;
 
-import nts.NTSConfig;
-import nts.NTSKEHandshake;
 import nts.NTSUDPClient;
 import nts.NtpUtils;
 import nts.NtpV3Packet;
@@ -15,17 +13,12 @@ public class NTSTime {
     public static void main(String[] args) {
         
         String host = "paris.time.system76.com";
-        int port = 4460;
-
-        NTSKEHandshake tlsHandshake = new NTSKEHandshake();
-        NTSConfig ntsConfig = tlsHandshake.doHandshake(host, port);
-        System.out.println("\n" + ntsConfig);
 
         try {
             NTSUDPClient client = new NTSUDPClient();
-            InetAddress hostAddr = InetAddress.getByName(ntsConfig.host);
+            InetAddress hostAddr = InetAddress.getByName(host);
 
-            TimeInfo info = client.getTime(hostAddr, ntsConfig);
+            TimeInfo info = client.getTime(hostAddr);
 
             client.close();
 

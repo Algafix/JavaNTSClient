@@ -1,4 +1,4 @@
-package NTSExtensionFields;
+package nts.NTSExtensionFields;
 
 public enum FieldType {
     UNIQUE_IDENTIFIER(0x0104),

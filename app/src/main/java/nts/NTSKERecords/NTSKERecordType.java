@@ -1,4 +1,4 @@
-package NTSKERecords;
+package nts.NTSKERecords;
 
 public enum NTSKERecordType {
     EndOfMessage(0),

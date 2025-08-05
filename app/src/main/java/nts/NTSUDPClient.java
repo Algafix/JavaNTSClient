@@ -20,6 +20,8 @@ package nts;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.net.DatagramSocketClient;
 
@@ -36,6 +38,31 @@ public final class NTSUDPClient extends DatagramSocketClient {
 
     private int version = NtpV3Packet.VERSION_4;
 
+    private List<NTSPeer> peers = new ArrayList<>();
+    private NTSKEHandshake tlsHandshake = new NTSKEHandshake();
+
+    private NTSPeer getNtsPeer(final InetAddress host) {
+        for (NTSPeer peer : peers) {
+            if (peer.KEHost.equals(host.getHostAddress())) {
+                return peer;
+            }
+        }
+        return null;
+    }
+
+    private NTSConfig retrievePeerConfig(final InetAddress host) {
+        NTSPeer peer = getNtsPeer(host);
+        if (peer == null) {
+            peer = new NTSPeer(host.getHostAddress());
+            NTSConfig ntsConfig = tlsHandshake.doHandshake(peer.KEHost, peer.KEPort);
+            System.out.println("\n" + ntsConfig);
+            peer.ntsConfig = ntsConfig;
+            peers.add(peer);
+            return ntsConfig;
+        }
+        return peer.ntsConfig;
+    }
+
     /**
      * Retrieves the time information from the specified server on the default NTP port and returns it. The time is the number of milliseconds since 00:00
      * (midnight) 1 January 1900 UTC, as specified by RFC 1305. This method reads the raw NTP packet and constructs a <i>TimeInfo</i> object that allows access
@@ -45,8 +72,8 @@ public final class NTSUDPClient extends DatagramSocketClient {
      * @return The time value retrieved from the server.
      * @throws IOException If an error occurs while retrieving the time.
      */
-    public TimeInfo getTime(final InetAddress host, NTSConfig ntsConfig) throws IOException {
-        return getTime(host, NtpV3Packet.NTP_PORT, ntsConfig);
+    public TimeInfo getTime(final InetAddress host) throws IOException {
+        return getTime(host, NtpV3Packet.NTP_PORT);
     }
 
     /**
@@ -59,7 +86,10 @@ public final class NTSUDPClient extends DatagramSocketClient {
      * @return The time value retrieved from the server.
      * @throws IOException If an error occurs while retrieving the time or if received packet does not match the request.
      */
-    public TimeInfo getTime(final InetAddress host, final int port, NTSConfig ntsConfig) throws IOException {
+    public TimeInfo getTime(final InetAddress host, final int port) throws IOException {
+
+        // Check if we have a valid handshake with the host
+        NTSConfig ntsConfig = retrievePeerConfig(host);
 
         // if not connected then open to next available UDP port
         if (!isOpen()) {

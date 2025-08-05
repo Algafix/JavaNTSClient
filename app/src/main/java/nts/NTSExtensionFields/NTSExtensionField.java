@@ -1,4 +1,4 @@
-package NTSExtensionFields;
+package nts.NTSExtensionFields;
 
 public class NTSExtensionField {
 

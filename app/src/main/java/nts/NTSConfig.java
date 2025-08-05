@@ -3,7 +3,7 @@ package nts;
 import java.util.ArrayList;
 import java.util.List;
 
-import NTSKERecords.*;
+import nts.NTSKERecords.*;
 
 public class NTSConfig {
     public Constants.NTSNextProtocols NTSProtocol;

@@ -19,8 +19,8 @@ package nts;
 
 import java.net.DatagramPacket;
 
-import NTSExtensionFields.FieldType;
-import NTSExtensionFields.NTSExtensionField;
+import nts.NTSExtensionFields.FieldType;
+import nts.NTSExtensionFields.NTSExtensionField;
 import java.util.ArrayList;
 import java.util.List;
 

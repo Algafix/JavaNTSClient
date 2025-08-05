@@ -3,8 +3,7 @@ package nts;
 import java.util.ArrayList;
 import java.util.List;
 
-import NTSKERecords.Constants;
-import NTSKERecords.*;
+import nts.NTSKERecords.*;
 
 public class NTSKEMessage {
 
