@@ -69,7 +69,7 @@ public class NtpV3Impl implements NtpV3Packet {
         return b & 0xFF;
     }
 
-    private final byte[] buf = new byte[48];
+    protected byte[] buf = new byte[48];
 
     private volatile DatagramPacket dp;
 
@@ -103,12 +103,33 @@ public class NtpV3Impl implements NtpV3Packet {
      * @return a datagram packet.
      */
     @Override
-    public synchronized DatagramPacket getDatagramPacket() {
-        if (dp == null) {
+    public synchronized DatagramPacket getDatagramPacket(int sz) {
+        int curr_buf_sz = buf.length;
+        if(sz < 48 || sz %4 != 0)
+        {
+            throw new RuntimeException();
+        }
+        if(sz != curr_buf_sz)
+        {
+            byte []new_buf = new byte[sz];
+            System.arraycopy(buf, 0, new_buf, 0, Math.min(sz, curr_buf_sz));
+            buf = new_buf;
+        }
+        if (dp == null || sz != curr_buf_sz) {
             dp = new DatagramPacket(buf, buf.length);
             dp.setPort(NTP_PORT);
         }
         return dp;
+    }
+
+    /**
+     * Returns the datagram packet with the NTP details already filled in.
+     *
+     * @return a datagram packet.
+     */
+    @Override
+    public synchronized DatagramPacket getDatagramPacket() {
+        return getDatagramPacket(buf.length);
     }
 
     /**

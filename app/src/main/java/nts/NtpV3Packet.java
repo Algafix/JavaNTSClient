@@ -132,6 +132,11 @@ public interface NtpV3Packet {
     DatagramPacket getDatagramPacket();
 
     /**
+     * @return a datagram packet with the NTP parts already filled in
+     */
+    DatagramPacket getDatagramPacket(int sz);
+
+    /**
      * @return leap indicator as defined in RFC-1305
      */
     int getLeapIndicator();
