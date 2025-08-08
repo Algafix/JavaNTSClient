@@ -1,5 +1,7 @@
 package nts.NTSExtensionFields;
 
+import java.util.Arrays;
+
 public class NTSExtensionField {
 
     public FieldType fieldType;
@@ -13,6 +15,29 @@ public class NTSExtensionField {
         this.fieldType = fieldType;
         this.fieldLength = body.length + 4; // 2 bytes for field type, 2 bytes for length
         this.body = body;
+    }
+
+    public static NTSExtensionField fromBytes(byte []buf, int idx)
+    {
+
+        int num_bytes = buf.length;
+        int remaining = num_bytes - idx;
+        if(remaining < 4)
+        {
+            throw new RuntimeException();
+        }
+        byte []short_buf = Arrays.copyOfRange(buf, idx, idx+2);
+        FieldType fieldType = FieldType.fromBytes(short_buf);
+        short_buf = Arrays.copyOfRange(buf, idx+2, idx+4);
+        int fieldLength = ((short_buf[0] & 0xFF) << 8) + (short_buf[1]&0xFF);
+
+        if(remaining < fieldLength)
+        {
+            throw new RuntimeException();
+        }
+        short_buf = Arrays.copyOfRange(buf, idx+4, idx+fieldLength);
+
+        return new NTSExtensionField(fieldType, short_buf);
     }
 
     /**

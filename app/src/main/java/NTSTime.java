@@ -1,34 +1,46 @@
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.List;
 
 import nts.NTSUDPClient;
 import nts.NtpUtils;
 import nts.NtpV3Packet;
 import nts.TimeInfo;
 import nts.TimeStamp;
+import nts.AuthenticationFailureException;
 
 public class NTSTime {
     
     public static void main(String[] args) {
         
-        String host = "paris.time.system76.com";
+        //String host = "paris.time.system76.com";
+        final List<String> TIME_SERVERS = new ArrayList<>(
+            List.of("paris.time.system76.com", "time.cloudflare.com"));
+        NTSUDPClient client = new NTSUDPClient();
 
-        try {
-            NTSUDPClient client = new NTSUDPClient();
-            InetAddress hostAddr = InetAddress.getByName(host);
+        for(String host: TIME_SERVERS)
+        {
+            try {
+                InetAddress hostAddr = InetAddress.getByName(host);
 
-            TimeInfo info = client.getTime(hostAddr);
+                TimeInfo info = client.getTime(hostAddr);
 
-            client.close();
 
-            processResponse(info);
+                System.out.println(" Server: " + host);
+                processResponse(info);
 
-        } catch (UnknownHostException e) {
-            System.err.println("Unknown host: " + e.getMessage());
-        } catch (Exception e) {
-            e.printStackTrace();
-        } 
+            } catch (UnknownHostException e) {
+                System.err.println("Unknown host: " + e.getMessage());
+            } catch(AuthenticationFailureException e)
+            {
+                System.err.println("Authentication failure: " + e.getMessage());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        client.close();
 
     }
 
