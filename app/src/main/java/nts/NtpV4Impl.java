@@ -1,16 +1,8 @@
 package nts;
 
-import java.net.DatagramPacket;
-
-import nts.NTSExtensionFields.FieldType;
 import nts.NTSExtensionFields.NTSExtensionField;
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.crypto.IllegalBlockSizeException;
-
-import org.cryptomator.siv.*;
-import org.cryptomator.siv.org.bouncycastle.util.Arrays;
 
 /**
  * Implements {@link NtpV3Packet} to convert Java objects to and from the Network Time Protocol (NTP) data message header format described in RFC-1305.
