@@ -48,6 +48,41 @@ public class NtsImpl extends NtpV4Impl implements NtsPacket {
     }
 
     /**
+     * Build an NTS packet
+     * @param cookie The NTS cookie to use in the packet
+     * @param num_cookies Number of cookies to request
+     */
+    public void buildRequest(final byte [] cookie, final int num_cookies)
+    {
+        super.buildRequest();
+
+        // Calculate a unique identifier and add the Extension Field
+        byte[] unique_identifier = new byte[32];
+        new java.security.SecureRandom().nextBytes(unique_identifier);
+        addUniqueIdentifierEF(unique_identifier);
+
+        // Use one of the negotiated cookies
+        addCookieEF(cookie);
+
+        // Replace used cookies (try to maintain a backlog of 8)
+        // The server will respond with one new cookie to replace
+        // the cookie in the extension field above plus one extra
+        // for each cookie placeholder, so we count from 0 to num_cookies-2
+        // below
+        for(int idx=0; idx < num_cookies - 1; ++idx)
+        {
+            addCookiePlaceholderEF(cookie);
+        }
+
+        /*
+         * Prepare the authentication and encryption Extension Field
+         * This is done here to avoid unnecessary delays in the time measurement the timestamping of the request packet.
+         */
+        prepareAuthAndEncEF();
+        
+    }
+
+    /**
      * Adds a unique identifier extension field to the NTSv4 packet.
      * @param unique_identifier_body the unique identifier byte array, must be at least 32 bytes long.
      */
@@ -125,6 +160,18 @@ public class NtsImpl extends NtpV4Impl implements NtsPacket {
         authAndEncEF.replaceBody(ciphertext, 4 + nonce.length);
 
         System.arraycopy(authAndEncEF.toByteArray(), 0, buf, associatedDataLenght, authAndEncEF.getFieldLength());
+    }
+
+    /**
+     * Creates the AuthAndEnc EF with the given keys and a random nonce.
+     * This is done after the NTP packet has been timestamped. Must be called after prepareAuthAndEncEF() has been called.
+     *
+     */
+    public void createAuthAndEncEF()
+    {
+        byte[] nonce = new byte[16];
+        new java.security.SecureRandom().nextBytes(nonce);
+        createAuthAndEncEF(nonce);
     }
 
     /**

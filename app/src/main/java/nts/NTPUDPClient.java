@@ -66,14 +66,14 @@ public final class NTPUDPClient extends DatagramSocketClient {
         }
 
         final NtpV3Packet message = new NtpV3Impl();
-        message.setMode(NtpV3Packet.MODE_CLIENT);
-        message.setVersion(version);
+        message.buildRequest();
+
         final DatagramPacket sendPacket = message.getDatagramPacket();
         sendPacket.setAddress(host);
         sendPacket.setPort(port);
 
         final NtpV3Packet recMessage = new NtpV3Impl();
-        final DatagramPacket receivePacket = recMessage.getDatagramPacket();
+        final DatagramPacket receivePacket = recMessage.getDatagramPacket(sendPacket.getLength());
 
         /*
          * Must minimize the time between getting the current time, timestamping the packet, and sending it out which introduces an error in the delay time. No
@@ -91,9 +91,7 @@ public final class NTPUDPClient extends DatagramSocketClient {
         final long returnTimeMillis = System.currentTimeMillis();
 
         // Prevent invalid time information if response does not match request
-        if (!now.equals(recMessage.getOriginateTimeStamp())) {
-            throw new IOException("Originate time does not match the request");
-        }
+        recMessage.validate(message);
 
         // create TimeInfo message container but don't pre-compute the details yet
         return new TimeInfo(recMessage, returnTimeMillis, false);

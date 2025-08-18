@@ -128,6 +128,12 @@ public interface NtpV3Packet {
     String TYPE_DAYTIME = "DAYTIME"; // RFC-867
 
     /**
+     * Build a request packet
+     * @return Nothing
+     */
+    void buildRequest();
+
+    /**
      * @return a datagram packet with the NTP parts already filled in
      */
     DatagramPacket getDatagramPacket();

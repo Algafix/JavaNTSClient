@@ -4,6 +4,13 @@ import java.io.IOException;
 
 public interface NtsPacket extends NtpV4Packet {
     /**
+     * Build an NTS packet
+     * @param cookie The NTS cookie to use in the packet
+     * @param num_cookies Number of cookies to request
+     */
+    public void buildRequest(final byte [] cookie, final int num_cookies);
+
+    /**
      * Adds a unique identifier extension field to the NTSv4 packet.
      * @param unique_identifier_body the unique identifier byte array, must be at least 32 bytes long.
      */
@@ -37,6 +44,13 @@ public interface NtsPacket extends NtpV4Packet {
      * @param nonce  the nonce to be used for encryption
      */
     public void createAuthAndEncEF(byte[] nonce);
+
+    /**
+     * Creates the AuthAndEnc EF with the given keys and a random nonce.
+     * This is done after the NTP packet has been timestamped. Must be called after prepareAuthAndEncEF() has been called.
+     *
+     */
+    public void createAuthAndEncEF();
 
     /**
      * Decrypt and verify a received NTS packet

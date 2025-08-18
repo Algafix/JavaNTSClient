@@ -100,37 +100,14 @@ public final class NTSUDPClient extends DatagramSocketClient {
 
         // Craft the client message
         final NtsImpl message = new NtsImpl(ntsConfig.C2SKey);
-        message.setMode(NtsImpl.MODE_CLIENT);
-        message.setVersion(version);
-
-        // Calculate a unique identifier and add the Extension Field
-        byte[] unique_identifier = new byte[32];
-        new java.security.SecureRandom().nextBytes(unique_identifier);
-        message.addUniqueIdentifierEF(unique_identifier);
 
         // Use one of the negotiated cookies
         byte [] cookie = ntsConfig.cookies.get(0);
-        message.addCookieEF(ntsConfig.cookies.get(0));
         ntsConfig.cookies.remove(0);
 
         // Replace used cookies (try to maintain a backlog of 8)
-        // The server will respond with one new cookie to replace
-        // the cookie in the extension field above plus one extra
-        // for each cookie placeholder, so we count from 0 to ncookies_needed-2
-        // below
         final int ncookies_needed = 8 - ntsConfig.cookies.size();
-        for(int idx=0; idx < ncookies_needed - 1; ++idx)
-        {
-            message.addCookiePlaceholderEF(cookie);
-        }
-
-        /*
-         * Prepare the authentication and encryption Extension Field
-         * This is done here to avoid unnecessary delays in the time measurement the timestamping of the request packet.
-         */
-        message.prepareAuthAndEncEF();
-        byte[] nonce = new byte[16];
-        new java.security.SecureRandom().nextBytes(nonce);
+        message.buildRequest(cookie, ncookies_needed);
 
         // Obtain the datagram packets for the request and response
         final DatagramPacket sendPacket = message.getDatagramPacket();
@@ -150,7 +127,7 @@ public final class NTSUDPClient extends DatagramSocketClient {
         // in server response is all 0's which is "Thu Feb 07 01:28:16 EST 2036".
         message.setTransmitTime(now);
         // And now we can create the authentication and encryption Extension Field
-        message.createAuthAndEncEF(nonce);
+        message.createAuthAndEncEF();
 
         checkOpen().send(sendPacket);
         checkOpen().receive(receivePacket);

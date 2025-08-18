@@ -76,6 +76,7 @@ public class NtpV3Impl implements NtpV3Packet {
 
     /** Creates a new instance of NtpV3Impl */
     public NtpV3Impl() {
+        setVersion(3);
     }
 
     /**
@@ -96,6 +97,15 @@ public class NtpV3Impl implements NtpV3Packet {
         }
         final NtpV3Impl other = (NtpV3Impl) obj;
         return java.util.Arrays.equals(buf, other.buf);
+    }
+
+    /**
+     * Build a request packet
+     * @return Nothing
+     */
+    public void buildRequest()
+    {
+        setMode(NtsImpl.MODE_CLIENT);
     }
 
     /**
