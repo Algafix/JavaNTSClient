@@ -7,7 +7,7 @@ import java.util.List;
 import nts.*;
 //import org.apache.commons.net.ntp.*;
 
-public class NptTime {
+public class NtpTime {
 
     private static final NumberFormat numberFormat = new java.text.DecimalFormat("0.00");
 
