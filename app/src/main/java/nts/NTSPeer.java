@@ -5,6 +5,7 @@ public class NTSPeer {
     public int KEPort = 4460; // Default port for KE
     private NTSKEHandshake tlsHandshake = new NTSKEHandshake();
     public NTSConfig ntsConfig;
+    public boolean nakReceived = false;
 
     public NTSPeer(String KEHost) {
         this.KEHost = KEHost;
@@ -12,6 +13,7 @@ public class NTSPeer {
     }
 
     public void doHandshake() {
+        nakReceived = false;
         ntsConfig = tlsHandshake.doHandshake(KEHost, KEPort);
     }
 

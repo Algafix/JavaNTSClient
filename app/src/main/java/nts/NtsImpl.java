@@ -23,6 +23,7 @@ import nts.NTSExtensionFields.NTSExtensionField;
 import org.cryptomator.siv.*;
 //import org.cryptomator.siv.org.bouncycastle.util.Arrays;
 import java.util.Arrays;
+import java.io.IOException;
 
 /**
  * Implements {@link NtsPacket} to convert Java objects to and from the Network Time Protocol (NTP) data message header format described in RFC-1305.
@@ -33,11 +34,17 @@ public class NtsImpl extends NtpV4Impl implements NtsPacket {
     public int associatedDataLenght;
     public byte[] plaintext;
     public NTSExtensionField authAndEncEF;
+    private byte[] ctrKey;
+    private byte[] macKey;
 
     private static final SivMode AES_SIV = new SivMode();
 
     /** Creates a new instance of NtsImpl */
-    public NtsImpl() {
+    public NtsImpl(byte []key) {
+        ctrKey = new byte[16];
+        macKey = new byte[16];
+        System.arraycopy(key, 0, macKey, 0, 16);  // macKey are the first 16 bytes of the "concatenated" key
+        System.arraycopy(key, 16, ctrKey, 0, 16);  // ctrKey are the last 16 bytes of the "concatenated" key
     }
 
     /**
@@ -109,11 +116,9 @@ public class NtsImpl extends NtpV4Impl implements NtsPacket {
      * Creates the AuthAndEnc EF with the given keys and nonce.
      * This is done after the NTP packet has been timestamped. Must be called after prepareAuthAndEncEF() has been called.
      *
-     * @param ctrKey First half of the AES_SIV Key
-     * @param macKey Second half of the AES_SIV Key
      * @param nonce  the nonce to be used for encryption
      */
-    public void createAuthAndEncEF(byte[] ctrKey, byte[] macKey, byte[] nonce) {
+    public void createAuthAndEncEF(byte[] nonce) {
         
         byte[] ciphertext = AES_SIV.encrypt(ctrKey, macKey, plaintext, Arrays.copyOfRange(buf, 0, associatedDataLenght), nonce);
         authAndEncEF.replaceBody(nonce, 4);
@@ -156,10 +161,8 @@ public class NtsImpl extends NtpV4Impl implements NtsPacket {
     /**
      * Decrypt and verify a received NTS packet
      *
-     * @param ctrKey First half of the AES_SIV Key
-     * @param macKey Second half of the AES_SIV Key
      */
-    public byte [] decryptAndVerify(byte [] ctrKey, byte []macKey) throws AuthenticationFailureException
+    public byte [] decryptAndVerify() throws AuthenticationFailureException
     {
         if(associatedDataLenght == -1 || authAndEncEF == null)
         {
@@ -196,6 +199,25 @@ public class NtsImpl extends NtpV4Impl implements NtsPacket {
         return pt;
     }
 
+    /**
+     * Validate a response packet given a request packet
+     * 
+     * @param req - The request packet
+     * 
+     * @throws IOException - On failure
+     */
+    @Override
+    public void validate(NtsPacket req) throws IOException, NtsNakException, AuthenticationFailureException
+    {
+        if(getStratum() == 0 && getReferenceIdString() == "NTSN")
+        {
+            throw new NtsNakException();
+        }
+        super.validate((NtpV3Packet) req);
+
+        decryptAndVerify();
+
+    }
 
 }
 

@@ -1,5 +1,7 @@
 package nts;
 
+import java.io.IOException;
+
 public interface NtsPacket extends NtpV4Packet {
     /**
      * Adds a unique identifier extension field to the NTSv4 packet.
@@ -32,17 +34,22 @@ public interface NtsPacket extends NtpV4Packet {
      * Creates the AuthAndEnc EF with the given keys and nonce.
      * This is done after the NTP packet has been timestamped. Must be called after prepareAuthAndEncEF() has been called.
      *
-     * @param ctrKey First half of the AES_SIV Key
-     * @param macKey Second half of the AES_SIV Key
      * @param nonce  the nonce to be used for encryption
      */
-    public void createAuthAndEncEF(byte[] ctrKey, byte[] macKey, byte[] nonce);
+    public void createAuthAndEncEF(byte[] nonce);
 
     /**
      * Decrypt and verify a received NTS packet
      *
-     * @param ctrKey First half of the AES_SIV Key
-     * @param macKey Second half of the AES_SIV Key
      */
-    public byte [] decryptAndVerify(byte [] ctrKey, byte []macKey) throws AuthenticationFailureException;
+    public byte [] decryptAndVerify() throws AuthenticationFailureException;
+
+    /**
+     * Validate a response packet given a request packet
+     * 
+     * @param req - The request packet
+     * 
+     * @throws IOException - On failure
+     */
+    public void validate(NtsPacket req) throws IOException, NtsNakException, AuthenticationFailureException;
 }

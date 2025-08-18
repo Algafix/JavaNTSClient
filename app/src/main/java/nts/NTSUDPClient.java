@@ -49,16 +49,15 @@ public final class NTSUDPClient extends DatagramSocketClient {
                 return peer;
             }
         }
-        return null;
+        return new NTSPeer(host.getHostAddress());
     }
 
-    private NTSConfig retrievePeerConfig(final InetAddress host) {
+    private void removeNtsPeer(final InetAddress host){
         NTSPeer peer = getNtsPeer(host);
-        if (peer == null) {
-            peer = new NTSPeer(host.getHostAddress());
-            peers.add(peer);
+        if(peer != null)
+        {
+            peers.remove(peer);
         }
-        return peer.ntsConfig;
     }
 
     /**
@@ -70,7 +69,7 @@ public final class NTSUDPClient extends DatagramSocketClient {
      * @return The time value retrieved from the server.
      * @throws IOException If an error occurs while retrieving the time.
      */
-    public TimeInfo getTime(final InetAddress host) throws IOException, AuthenticationFailureException {
+    public TimeInfo getTime(final InetAddress host) throws IOException, AuthenticationFailureException, NtsNakException {
         return getTime(host, NtpV3Packet.NTP_PORT);
     }
 
@@ -84,10 +83,15 @@ public final class NTSUDPClient extends DatagramSocketClient {
      * @return The time value retrieved from the server.
      * @throws IOException If an error occurs while retrieving the time or if received packet does not match the request.
      */
-    public TimeInfo getTime(final InetAddress host, final int port) throws IOException, AuthenticationFailureException {
+    public TimeInfo getTime(final InetAddress host, final int port) throws IOException, AuthenticationFailureException, NtsNakException {
 
         // Check if we have a valid handshake with the host
-        NTSConfig ntsConfig = retrievePeerConfig(host);
+        NTSPeer peer = getNtsPeer(host);
+        if(peer.nakReceived)
+        {
+            peer.doHandshake();
+        }
+        NTSConfig ntsConfig = peer.ntsConfig;
 
         // if not connected then open to next available UDP port
         if (!isOpen()) {
@@ -95,7 +99,7 @@ public final class NTSUDPClient extends DatagramSocketClient {
         }
 
         // Craft the client message
-        final NtsImpl message = new NtsImpl();
+        final NtsImpl message = new NtsImpl(ntsConfig.C2SKey);
         message.setMode(NtsImpl.MODE_CLIENT);
         message.setVersion(version);
 
@@ -110,6 +114,10 @@ public final class NTSUDPClient extends DatagramSocketClient {
         ntsConfig.cookies.remove(0);
 
         // Replace used cookies (try to maintain a backlog of 8)
+        // The server will respond with one new cookie to replace
+        // the cookie in the extension field above plus one extra
+        // for each cookie placeholder, so we count from 0 to ncookies_needed-2
+        // below
         final int ncookies_needed = 8 - ntsConfig.cookies.size();
         for(int idx=0; idx < ncookies_needed - 1; ++idx)
         {
@@ -123,17 +131,13 @@ public final class NTSUDPClient extends DatagramSocketClient {
         message.prepareAuthAndEncEF();
         byte[] nonce = new byte[16];
         new java.security.SecureRandom().nextBytes(nonce);
-        byte[] ctrKey = new byte[16];
-        byte[] macKey = new byte[16];
-        System.arraycopy(ntsConfig.C2SKey, 0, macKey, 0, 16);  // macKey are the first 16 bytes of the "concatenated" key
-        System.arraycopy(ntsConfig.C2SKey, 16, ctrKey, 0, 16);  // ctrKey are the last 16 bytes of the "concatenated" key
 
         // Obtain the datagram packets for the request and response
         final DatagramPacket sendPacket = message.getDatagramPacket();
         sendPacket.setAddress(host);
         sendPacket.setPort(port);
 
-        final NtsPacket recMessage = new NtsImpl();
+        final NtsPacket recMessage = new NtsImpl(ntsConfig.S2CKey);
         final DatagramPacket receivePacket = recMessage.getDatagramPacket(sendPacket.getLength());
 
         /*
@@ -146,7 +150,7 @@ public final class NTSUDPClient extends DatagramSocketClient {
         // in server response is all 0's which is "Thu Feb 07 01:28:16 EST 2036".
         message.setTransmitTime(now);
         // And now we can create the authentication and encryption Extension Field
-        message.createAuthAndEncEF(ctrKey, macKey, nonce);
+        message.createAuthAndEncEF(nonce);
 
         checkOpen().send(sendPacket);
         checkOpen().receive(receivePacket);
@@ -154,17 +158,27 @@ public final class NTSUDPClient extends DatagramSocketClient {
         final long returnTimeMillis = System.currentTimeMillis();
 
         // Prevent invalid time information if response does not match request
-        if (!now.equals(recMessage.getOriginateTimeStamp())) {
-            throw new IOException("Originate time does not match the request");
-        }
-        System.arraycopy(ntsConfig.S2CKey, 0, macKey, 0, 16);  // macKey are the first 16 bytes of the "concatenated" key
-        System.arraycopy(ntsConfig.S2CKey, 16, ctrKey, 0, 16);  // ctrKey are the last 16 bytes of the "concatenated" key
-        recMessage.decryptAndVerify(ctrKey, macKey);
-
-        List<NTSExtensionField> new_cookies = recMessage.getExtensionFields(FieldType.NTS_COOKIE.getValue());
-        for(NTSExtensionField new_cookie: new_cookies)
+        try
         {
-            ntsConfig.cookies.add(new_cookie.body);
+            recMessage.validate(message);
+            peer.nakReceived = false;
+
+            List<NTSExtensionField> new_cookies = recMessage.getExtensionFields(FieldType.NTS_COOKIE.getValue());
+            for(NTSExtensionField new_cookie: new_cookies)
+            {
+                ntsConfig.cookies.add(new_cookie.body);
+            }
+        }
+        catch( NtsNakException e)
+        {
+            // RFC8915: store the fact that a NAK has been received
+            // And try to re-initiate the handshake (but don't throw out the old cookies)
+            peer.nakReceived = true;
+            throw e;
+        }
+        catch(Exception e)
+        {
+            throw e;
         }
 
         // create TimeInfo message container but don't pre-compute the details yet
