@@ -17,6 +17,7 @@
 
 package nts;
 
+import java.io.IOException;
 import java.net.DatagramPacket;
 
 /**
@@ -612,4 +613,33 @@ public class NtpV3Impl implements NtpV3Packet {
                 + getTransmitTimeStamp().toDateString() + " ]";
     }
 
+    /**
+     * Validate a response packet given a request packet
+     * 
+     * @param req - The request packet
+     * 
+     * @throws IOException - On failure
+     */
+    @Override
+    public void validate(NtpV3Packet req) throws IOException
+    {
+        if(this.getStratum() == 0)
+        {
+            if(getReferenceIdString() == "DENY")
+            {
+                throw new IOException("NTP Access denied");
+            }
+
+            if(getOriginateTimeStamp()!= req.getTransmitTimeStamp())
+            {
+                throw new IOException("Timestamp mismatch");
+            }
+
+            if(getTransmitTimeStamp() == new TimeStamp(0))
+            {
+                throw new IOException("Invalid timestamp");
+            }
+
+        }
+    }
 }
