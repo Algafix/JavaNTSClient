@@ -101,7 +101,6 @@ public class NtpV3Impl implements NtpV3Packet {
 
     /**
      * Build a request packet
-     * @return Nothing
      */
     public void buildRequest()
     {

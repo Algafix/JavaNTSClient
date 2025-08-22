@@ -129,7 +129,6 @@ public interface NtpV3Packet {
 
     /**
      * Build a request packet
-     * @return Nothing
      */
     void buildRequest();
 
