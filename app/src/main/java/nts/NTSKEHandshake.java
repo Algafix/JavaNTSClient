@@ -23,8 +23,9 @@ public class NTSKEHandshake {
         // Create a TLSv1.3 socket using Conscrypt to have access to exportKeyingMaterial
         try {
             Security.insertProviderAt(Conscrypt.newProvider(), 1);
+            X509TrustManager tm = Conscrypt.getDefaultX509TrustManager();
             SSLContext context = SSLContext.getInstance("TLSv1.3", "Conscrypt");
-            context.init(null, null, null);
+            context.init(null, new TrustManager[]{tm}, null);
             factory = context.getSocketFactory();
         } catch (Exception e) {
             e.printStackTrace();
