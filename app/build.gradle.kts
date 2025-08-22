@@ -25,15 +25,15 @@ dependencies {
     // Use JUnit Jupiter for testing.
     testImplementation(libs.junit.jupiter)
 
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly(libs.junit.platform)
 
     // This dependency is used by the application.
     implementation(libs.guava)
 
     // Aleix
-    implementation("org.cryptomator:siv-mode:1.6.1")
-    implementation("commons-net:commons-net:3.11.1")
-    implementation("org.conscrypt:conscrypt-openjdk-uber:2.5.2")
+    implementation(libs.siv.mode)
+    implementation(libs.commons.net)
+    implementation(libs.conscrypt)
 }
 
 // Apply a specific Java toolchain to ease working on different environments.

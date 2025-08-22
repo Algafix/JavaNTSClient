@@ -4,7 +4,15 @@
 [versions]
 guava = "33.0.0-jre"
 junit-jupiter = "5.10.2"
+siv-mode = "1.6.1"
+conscrypt = "2.5.2"
+commons-net = "3.11.1"
 
 [libraries]
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+conscrypt = { group = "org.conscrypt", name = "conscrypt-openjdk-uber", version.ref = "conscrypt"}
+siv-mode = { group = "org.cryptomator", name = "siv-mode", version.ref = "siv-mode"}
+commons-net = { group = "commons-net", name = "commons-net", version.ref="commons-net"}
+junit-platform = {group = "org.junit.platform", name="junit-platform-launcher"}
+
