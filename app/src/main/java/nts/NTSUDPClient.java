@@ -49,7 +49,9 @@ public final class NTSUDPClient extends DatagramSocketClient {
                 return peer;
             }
         }
-        return new NTSPeer(host.getHostAddress());
+        NTSPeer peer = new NTSPeer(host.getHostAddress());
+        peers.add(peer);
+        return peer;
     }
 
     private void removeNtsPeer(final InetAddress host){
