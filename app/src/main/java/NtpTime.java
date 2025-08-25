@@ -1,24 +1,32 @@
 import java.text.NumberFormat;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 
 import nts.*;
 //import org.apache.commons.net.ntp.*;
 
-public class NptTime {
+public class NtpTime {
 
     private static final NumberFormat numberFormat = new java.text.DecimalFormat("0.00");
 
     public static void main(String[] args) throws Exception {
         //String TIME_SERVER = "pool.ntp.org";
-        String TIME_SERVER = "paris.time.system76.com";
-        NTPUDPClient client = new NTPUDPClient();
-        client.setVersion(4);
-        InetAddress hostAddr = InetAddress.getByName(TIME_SERVER);
-        TimeInfo info = client.getTime(hostAddr);
-        processResponse(info);
+        //String TIME_SERVER = "paris.time.system76.com";
+        final List<String> TIME_SERVERS = new ArrayList<>(
+            List.of("paris.time.system76.com", "time.cloudflare.com"));
+        for( String srv : TIME_SERVERS)
+        {
+            NTPUDPClient client = new NTPUDPClient();
+            client.setVersion(4);
+            InetAddress hostAddr = InetAddress.getByName(srv);
+            TimeInfo info = client.getTime(hostAddr);
+            System.out.println(" Server: " + srv);
+            processResponse(info);
 
-        client.close();
+            client.close();
+        }
     }
     
     public static void processResponse(final TimeInfo info) {

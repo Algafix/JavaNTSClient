@@ -17,6 +17,7 @@
 
 package nts;
 
+import java.io.IOException;
 import java.net.DatagramPacket;
 
 /**
@@ -69,12 +70,13 @@ public class NtpV3Impl implements NtpV3Packet {
         return b & 0xFF;
     }
 
-    private final byte[] buf = new byte[48];
+    protected byte[] buf = new byte[48];
 
     private volatile DatagramPacket dp;
 
     /** Creates a new instance of NtpV3Impl */
     public NtpV3Impl() {
+        setVersion(3);
     }
 
     /**
@@ -98,17 +100,46 @@ public class NtpV3Impl implements NtpV3Packet {
     }
 
     /**
+     * Build a request packet
+     */
+    public void buildRequest()
+    {
+        setMode(NtsImpl.MODE_CLIENT);
+    }
+
+    /**
+     * Returns the datagram packet with the NTP details already filled in.
+     *
+     * @return a datagram packet.
+     */
+    @Override
+    public synchronized DatagramPacket getDatagramPacket(int sz) {
+        int curr_buf_sz = buf.length;
+        if(sz < 48 || sz %4 != 0)
+        {
+            throw new RuntimeException();
+        }
+        if(sz != curr_buf_sz)
+        {
+            byte []new_buf = new byte[sz];
+            System.arraycopy(buf, 0, new_buf, 0, Math.min(sz, curr_buf_sz));
+            buf = new_buf;
+        }
+        if (dp == null || sz != curr_buf_sz) {
+            dp = new DatagramPacket(buf, buf.length);
+            dp.setPort(NTP_PORT);
+        }
+        return dp;
+    }
+
+    /**
      * Returns the datagram packet with the NTP details already filled in.
      *
      * @return a datagram packet.
      */
     @Override
     public synchronized DatagramPacket getDatagramPacket() {
-        if (dp == null) {
-            dp = new DatagramPacket(buf, buf.length);
-            dp.setPort(NTP_PORT);
-        }
-        return dp;
+        return getDatagramPacket(buf.length);
     }
 
     /**
@@ -591,4 +622,33 @@ public class NtpV3Impl implements NtpV3Packet {
                 + getTransmitTimeStamp().toDateString() + " ]";
     }
 
+    /**
+     * Validate a response packet given a request packet
+     * 
+     * @param req - The request packet
+     * 
+     * @throws IOException - On failure
+     */
+    @Override
+    public void validate(NtpV3Packet req) throws IOException
+    {
+        if(this.getStratum() == 0)
+        {
+            if(getReferenceIdString() == "DENY")
+            {
+                throw new IOException("NTP Access denied");
+            }
+
+            if(getOriginateTimeStamp()!= req.getTransmitTimeStamp())
+            {
+                throw new IOException("Timestamp mismatch");
+            }
+
+            if(getTransmitTimeStamp() == new TimeStamp(0))
+            {
+                throw new IOException("Invalid timestamp");
+            }
+
+        }
+    }
 }

@@ -18,6 +18,7 @@
 package nts;
 
 import java.net.DatagramPacket;
+import java.io.IOException;
 
 /**
  * Interface for a NtpV3Packet with get/set methods corresponding to the fields in the NTP Data Message Header described in RFC 1305.
@@ -127,9 +128,19 @@ public interface NtpV3Packet {
     String TYPE_DAYTIME = "DAYTIME"; // RFC-867
 
     /**
+     * Build a request packet
+     */
+    void buildRequest();
+
+    /**
      * @return a datagram packet with the NTP parts already filled in
      */
     DatagramPacket getDatagramPacket();
+
+    /**
+     * @return a datagram packet with the NTP parts already filled in
+     */
+    DatagramPacket getDatagramPacket(int sz);
 
     /**
      * @return leap indicator as defined in RFC-1305
@@ -327,5 +338,14 @@ public interface NtpV3Packet {
      * @param version the version to set
      */
     void setVersion(int version);
+
+    /**
+     * Validate a response packet given a request packet
+     * 
+     * @param req - The request packet
+     * 
+     * @throws IOException - On failure
+     */
+    void validate(NtpV3Packet req) throws IOException;
 
 }

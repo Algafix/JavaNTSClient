@@ -25,6 +25,9 @@ import java.util.List;
 
 import org.apache.commons.net.DatagramSocketClient;
 
+import nts.NTSExtensionFields.FieldType;
+import nts.NTSExtensionFields.NTSExtensionField;
+
 /**
  * The NTPUDPClient class is a UDP implementation of a client for the Network Time Protocol (NTP) described in RFC 1305 as well as the Simple Network Time
  * Protocol (SNTP) in RFC-2030. To use the class, merely open a local datagram socket with <a href="#open"> open </a> and call <a href="#getTime"> getTime </a>
@@ -46,16 +49,17 @@ public final class NTSUDPClient extends DatagramSocketClient {
                 return peer;
             }
         }
-        return null;
+        NTSPeer peer = new NTSPeer(host.getHostAddress());
+        peers.add(peer);
+        return peer;
     }
 
-    private NTSConfig retrievePeerConfig(final InetAddress host) {
+    private void removeNtsPeer(final InetAddress host){
         NTSPeer peer = getNtsPeer(host);
-        if (peer == null) {
-            peer = new NTSPeer(host.getHostAddress());
-            peers.add(peer);
+        if(peer != null)
+        {
+            peers.remove(peer);
         }
-        return peer.ntsConfig;
     }
 
     /**
@@ -67,7 +71,7 @@ public final class NTSUDPClient extends DatagramSocketClient {
      * @return The time value retrieved from the server.
      * @throws IOException If an error occurs while retrieving the time.
      */
-    public TimeInfo getTime(final InetAddress host) throws IOException {
+    public TimeInfo getTime(final InetAddress host) throws IOException, AuthenticationFailureException, NtsNakException {
         return getTime(host, NtpV3Packet.NTP_PORT);
     }
 
@@ -81,10 +85,15 @@ public final class NTSUDPClient extends DatagramSocketClient {
      * @return The time value retrieved from the server.
      * @throws IOException If an error occurs while retrieving the time or if received packet does not match the request.
      */
-    public TimeInfo getTime(final InetAddress host, final int port) throws IOException {
+    public TimeInfo getTime(final InetAddress host, final int port) throws IOException, AuthenticationFailureException, NtsNakException {
 
         // Check if we have a valid handshake with the host
-        NTSConfig ntsConfig = retrievePeerConfig(host);
+        NTSPeer peer = getNtsPeer(host);
+        if(peer.nakReceived)
+        {
+            peer.doHandshake();
+        }
+        NTSConfig ntsConfig = peer.ntsConfig;
 
         // if not connected then open to next available UDP port
         if (!isOpen()) {
@@ -92,38 +101,23 @@ public final class NTSUDPClient extends DatagramSocketClient {
         }
 
         // Craft the client message
-        final NtsV4Impl message = new NtsV4Impl();
-        message.setMode(NtsV4Impl.MODE_CLIENT);
-        message.setVersion(version);
-
-        // Calculate a unique identifier and add the Extension Field
-        byte[] unique_identifier = new byte[32];
-        new java.security.SecureRandom().nextBytes(unique_identifier);
-        message.addUniqueIdentifierEF(unique_identifier);
+        final NtsImpl message = new NtsImpl(ntsConfig.C2SKey);
 
         // Use one of the negotiated cookies
-        message.addCookieEF(ntsConfig.cookies.get(0));
+        byte [] cookie = ntsConfig.cookies.get(0);
         ntsConfig.cookies.remove(0);
 
-        /*
-         * Prepare the authentication and encryption Extension Field
-         * This is done here to avoid unnecessary delays in the time measurement the timestamping of the request packet.
-         */
-        message.prepareAuthAndEncEF();
-        byte[] nonce = new byte[16];
-        new java.security.SecureRandom().nextBytes(nonce);
-        byte[] ctrKey = new byte[16];
-        byte[] macKey = new byte[16];
-        System.arraycopy(ntsConfig.C2SKey, 0, macKey, 0, 16);  // macKey are the first 16 bytes of the "concatenated" key
-        System.arraycopy(ntsConfig.C2SKey, 16, ctrKey, 0, 16);  // ctrKey are the last 16 bytes of the "concatenated" key
+        // Replace used cookies (try to maintain a backlog of 8)
+        final int ncookies_needed = 8 - ntsConfig.cookies.size();
+        message.buildRequest(cookie, ncookies_needed);
 
         // Obtain the datagram packets for the request and response
         final DatagramPacket sendPacket = message.getDatagramPacket();
         sendPacket.setAddress(host);
         sendPacket.setPort(port);
 
-        final NtpV3Packet recMessage = new NtsV4Impl();
-        final DatagramPacket receivePacket = recMessage.getDatagramPacket();
+        final NtsPacket recMessage = new NtsImpl(ntsConfig.S2CKey);
+        final DatagramPacket receivePacket = recMessage.getDatagramPacket(sendPacket.getLength());
 
         /*
          * Must minimize the time between getting the current time, timestamping the packet, and sending it out which introduces an error in the delay time. No
@@ -135,7 +129,7 @@ public final class NTSUDPClient extends DatagramSocketClient {
         // in server response is all 0's which is "Thu Feb 07 01:28:16 EST 2036".
         message.setTransmitTime(now);
         // And now we can create the authentication and encryption Extension Field
-        message.createAuthAndEncEF(ctrKey, macKey, nonce);
+        message.createAuthAndEncEF();
 
         checkOpen().send(sendPacket);
         checkOpen().receive(receivePacket);
@@ -143,10 +137,27 @@ public final class NTSUDPClient extends DatagramSocketClient {
         final long returnTimeMillis = System.currentTimeMillis();
 
         // Prevent invalid time information if response does not match request
+        try
+        {
+            recMessage.validate(message);
+            peer.nakReceived = false;
 
-        System.out.println(recMessage);
-        if (!now.equals(recMessage.getOriginateTimeStamp())) {
-            throw new IOException("Originate time does not match the request");
+            List<NTSExtensionField> new_cookies = recMessage.getExtensionFields(FieldType.NTS_COOKIE.getValue());
+            for(NTSExtensionField new_cookie: new_cookies)
+            {
+                ntsConfig.cookies.add(new_cookie.body);
+            }
+        }
+        catch( NtsNakException e)
+        {
+            // RFC8915: store the fact that a NAK has been received
+            // And try to re-initiate the handshake (but don't throw out the old cookies)
+            peer.nakReceived = true;
+            throw e;
+        }
+        catch(Exception e)
+        {
+            throw e;
         }
 
         // create TimeInfo message container but don't pre-compute the details yet

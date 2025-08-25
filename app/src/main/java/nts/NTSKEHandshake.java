@@ -1,5 +1,6 @@
 package nts;
 
+import java.io.IOException;
 import java.security.Security;
 
 import javax.net.ssl.*;
@@ -23,8 +24,9 @@ public class NTSKEHandshake {
         // Create a TLSv1.3 socket using Conscrypt to have access to exportKeyingMaterial
         try {
             Security.insertProviderAt(Conscrypt.newProvider(), 1);
+            X509TrustManager tm = Conscrypt.getDefaultX509TrustManager();
             SSLContext context = SSLContext.getInstance("TLSv1.3", "Conscrypt");
-            context.init(null, null, null);
+            context.init(null, new TrustManager[]{tm}, null);
             factory = context.getSocketFactory();
         } catch (Exception e) {
             e.printStackTrace();
@@ -60,11 +62,22 @@ public class NTSKEHandshake {
             // Must be TLSv1.3 and ALPN Offer "ntske/1"
             SSLParameters params = socket.getSSLParameters();
             params.setProtocols(new String[] { "TLSv1.3" });
-            params.setApplicationProtocols(new String[] { "ntske/1" });
+            //params.setApplicationProtocols(new String[] { "ntske/1" });
             socket.setSSLParameters(params);
+            socket.setSoTimeout(300);
+            
+            // Weird issue on android:
+            // Conscrypt does not seems to use the application protocol from the ssl Params
+            // (https://github.com/google/conscrypt/issues/832)
+            // Need to be sneaky
+            Conscrypt.setApplicationProtocols(socket, new String[] {"ntske/1"});
 
             socket.startHandshake();
             //printSession(socket.getSession());
+            //System.out.println("Conscrypt v" + Conscrypt.version().major() + "." + Conscrypt.version().minor() + "." + Conscrypt.version().patch());
+            //System.out.println("Cipher Suites: " + String.join(", ", socket.getEnabledCipherSuites()));
+            //System.out.println("Protocols    : " + String.join(", ", socket.getEnabledProtocols()));
+            //System.out.println("App Protocols: " + socket.getApplicationProtocol());
 
             // Create NTSKE Client Message
             NTSKEMessage NtsKeClientMessage = new NTSKEMessage();
@@ -74,6 +87,7 @@ public class NTSKEHandshake {
 
             //System.out.println("\nNTSKE Client Message:");
             //System.out.println(NtsKeClientMessage);
+            //System.out.println(NtsKeClientMessage.toByteString());
 
             socket.getOutputStream().write(NtsKeClientMessage.toBytes());
             socket.getOutputStream().flush();
@@ -82,10 +96,16 @@ public class NTSKEHandshake {
             byte[] response = new byte[1024];
             int bytesRead = socket.getInputStream().read(response);
 
+            if(bytesRead < 0)
+            {
+                throw new IOException("Unable to read NTS KE Response from server");
+            }
+
             // Create NTSKE Response Message
             NTSKEMessage NTSKEResponseMessage = NTSKEMessage.parseNTSKERawMessage(response, bytesRead);
-            //System.out.println("\nNTSKE Server Message:");
+            //System.out.println("\nNTSKE Server Message: " + bytesRead + " bytes");
             //System.out.println(NTSKEResponseMessage);
+            //System.out.println(NTSKEResponseMessage.toByteString());
 
             // Derive client and server keys from TLS handshake
             byte[] context_c2s = getKeyExpansionContext(C2S_CONTEXT);
