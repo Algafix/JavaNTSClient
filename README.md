@@ -1,13 +1,13 @@
 # JavaNTSClient
 
-JavaNTSClient is a Java-based library designed to interact as a client with Network Time Security (NTS) server.
+JavaNTSClient is a Java-based library designed to interact as a client with Network Time Security (NTS) servers.
 
 The file [NTSTime.java](https://github.com/Algafix/JavaNTSClient/blob/main/app/src/main/java/NTSTime.java) contains an very easy example on how to use the library. A more complex example of its use by an Android app can be found [here](https://github.com/odrisci/SntsSampleAndroidApp).
 
-In general, only one `NTSUDPClient` object need to be instatiated. Multiple time severs can be queried from the same `NTSUDPClient` object using the `getTime` method.
+In general, only one `NTSUDPClient` object need to be instatiated. Multiple time servers can be queried from the same `NTSUDPClient` object using the `getTime` method.
 The library handles the TLS handshake, key extraction and cookie management independently for each time server.
 
-The interface is compatible and inspired by the [Apache Commons NTP library](https://commons.apache.org/proper/commons-net/apidocs/org/apache/commons/net/ntp/package-summary.html).
+The interface is compatible with and inspired by the [Apache Commons NTP library](https://commons.apache.org/proper/commons-net/apidocs/org/apache/commons/net/ntp/package-summary.html).
 
 ## Attribution
 
