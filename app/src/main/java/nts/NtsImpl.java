@@ -20,10 +20,16 @@ package nts;
 import nts.NTSExtensionFields.FieldType;
 import nts.NTSExtensionFields.NTSExtensionField;
 
-import org.cryptomator.siv.*;
-//import org.cryptomator.siv.org.bouncycastle.util.Arrays;
+import com.google.crypto.tink.InsecureSecretKeyAccess;
+import com.google.crypto.tink.util.SecretBytes;
+import com.google.crypto.tink.daead.AesSivParameters;
+import com.google.crypto.tink.daead.AesSivKey;
+import com.google.crypto.tink.daead.subtle.DeterministicAeads;
+import com.google.crypto.tink.subtle.AesSiv;
+
 import java.util.Arrays;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 
 /**
  * Implements {@link NtsPacket} to convert Java objects to and from the Network Time Protocol (NTP) data message header format described in RFC-1305.
@@ -34,17 +40,28 @@ public class NtsImpl extends NtpV4Impl implements NtsPacket {
     public int associatedDataLenght;
     public byte[] plaintext;
     public NTSExtensionField authAndEncEF;
-    private byte[] ctrKey;
-    private byte[] macKey;
-
-    private static final SivMode AES_SIV = new SivMode();
+    private DeterministicAeads AesSivDaead;
 
     /** Creates a new instance of NtsImpl */
     public NtsImpl(byte []key) {
-        ctrKey = new byte[16];
-        macKey = new byte[16];
-        System.arraycopy(key, 0, macKey, 0, 16);  // macKey are the first 16 bytes of the "concatenated" key
-        System.arraycopy(key, 16, ctrKey, 0, 16);  // ctrKey are the last 16 bytes of the "concatenated" key
+
+        try {
+        // Create key
+        AesSivParameters AES_SIV_PARAMETERS = AesSivParameters.builder()
+                .setKeySizeBytes(32)
+                .setVariant(AesSivParameters.Variant.NO_PREFIX)
+                .build();
+        SecretBytes keyBytes =
+            SecretBytes.copyFrom(
+                key,
+                InsecureSecretKeyAccess.get());
+
+        AesSivKey aesSivkey = AesSivKey.builder().setParameters(AES_SIV_PARAMETERS).setKeyBytes(keyBytes).build();
+        AesSivDaead = AesSiv.create(aesSivkey);
+
+        } catch(Exception e) {
+            throw new RuntimeException("Failed to create AES SIV KEY: " + e.getMessage());
+        }
     }
 
     /**
@@ -154,12 +171,16 @@ public class NtsImpl extends NtpV4Impl implements NtsPacket {
      * @param nonce  the nonce to be used for encryption
      */
     public void createAuthAndEncEF(byte[] nonce) {
-        
-        byte[] ciphertext = AES_SIV.encrypt(ctrKey, macKey, plaintext, Arrays.copyOfRange(buf, 0, associatedDataLenght), nonce);
-        authAndEncEF.replaceBody(nonce, 4);
-        authAndEncEF.replaceBody(ciphertext, 4 + nonce.length);
 
-        System.arraycopy(authAndEncEF.toByteArray(), 0, buf, associatedDataLenght, authAndEncEF.getFieldLength());
+        try {
+            // Change to _throws_ and control from caller
+            byte[] ciphertext = AesSivDaead.encryptDeterministicallyWithAssociatedDatas(plaintext, new byte[][] {Arrays.copyOfRange(buf, 0, associatedDataLenght), nonce});
+            authAndEncEF.replaceBody(nonce, 4);
+            authAndEncEF.replaceBody(ciphertext, 4 + nonce.length);
+            System.arraycopy(authAndEncEF.toByteArray(), 0, buf, associatedDataLenght, authAndEncEF.getFieldLength());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to encrypt NTS packet: " + e.getMessage());
+        }
     }
 
     /**
@@ -230,9 +251,9 @@ public class NtsImpl extends NtpV4Impl implements NtsPacket {
         byte [] pt;
         try
         {
-            pt = AES_SIV.decrypt(ctrKey, macKey, ct, ad, nonce);
+            pt = AesSivDaead.decryptDeterministicallyWithAssociatedDatas(ct, new byte[][] {ad, nonce});
         }
-        catch(final UnauthenticCiphertextException e)
+        catch(final GeneralSecurityException e)
         {
             throw new AuthenticationFailureException(e.getMessage());
         }

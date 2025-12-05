@@ -1,5 +1,6 @@
 
 import org.cryptomator.siv.*;
+import com.google.crypto.tink.subtle.Hex;
 
 public class AesSivTest {
     private static final SivMode AES_SIV = new SivMode();
@@ -38,17 +39,17 @@ public class AesSivTest {
         byte[] asso_data = new byte[32];
         java.util.Arrays.fill(asso_data, (byte) 0x43);
         java.util.Arrays.fill(nonce, (byte) 0x44);
-        System.out.println("key: " + bytes2hex(ctrKey) + " " + bytes2hex(macKey));
-        System.out.println("nonce: " + bytes2hex(nonce));
-        System.out.println("asso_data: " + bytes2hex(asso_data));
+        System.out.println("key: " + Hex.encode(ctrKey) + " " + Hex.encode(macKey));
+        System.out.println("nonce: " + Hex.encode(nonce));
+        System.out.println("asso_data: " + Hex.encode(asso_data));
 
         try {
             byte[] plaintext = "hello world".getBytes();
-            System.out.println(bytes2hex(plaintext));
+            System.out.println(Hex.encode(plaintext));
             byte[] encrypted = AES_SIV.encrypt(ctrKey, macKey, plaintext, asso_data, nonce);
-            System.out.println(bytes2hex(encrypted));
+            System.out.println(Hex.encode(encrypted));
             byte[] decrypted = AES_SIV.decrypt(ctrKey, macKey, encrypted, asso_data, nonce);
-            System.out.println(bytes2hex(decrypted));
+            System.out.println(Hex.encode(decrypted));
 
         } catch (Exception e) {
             System.err.println(e);
