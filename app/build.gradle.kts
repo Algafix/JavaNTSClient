@@ -11,10 +11,11 @@ plugins {
     `java-library`
     `maven-publish`
     signing
+    distribution
 }
 
 group = "io.github.algafix"
-version = "0.1"
+version = "0.2"
 
 repositories {
     // Use Maven Central for resolving dependencies.
@@ -31,9 +32,9 @@ dependencies {
     implementation(libs.guava)
 
     // Aleix
-    implementation(libs.siv.mode)
     implementation(libs.commons.net)
     implementation(libs.conscrypt)
+    implementation(libs.tink)
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
@@ -47,7 +48,7 @@ java {
 
 application {
     // Define the main class for the application.
-    mainClass = "NTSTime.java"
+    mainClass = "NTSTime"
 }
 
 tasks.named<Test>("test") {
@@ -81,7 +82,7 @@ publishing{
                 developers {
                     developer {
                         id = "algafix"
-                        name = "Aleix Gailan"
+                        name = "Aleix Galan"
                     }
                 }
                 scm {
