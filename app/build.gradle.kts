@@ -32,11 +32,9 @@ dependencies {
     implementation(libs.guava)
 
     // Aleix
-    implementation(libs.siv.mode)
     implementation(libs.commons.net)
     implementation(libs.conscrypt)
-    //implementation(libs.tink)
-    implementation(files("libs/tink.jar"))
+    implementation(libs.tink)
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
