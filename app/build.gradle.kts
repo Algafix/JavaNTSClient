@@ -7,15 +7,14 @@
 
 plugins {
     // Apply the application plugin to add support for building a CLI application in Java.
-    application
-    `java-library`
-    `maven-publish`
-    signing
-    distribution
+    id("application")
+    // Apply the java-library plugin to add support for api configuration.
+    id("java-library")
+    id("com.vanniktech.maven.publish") version "0.35.0"
 }
 
 group = "io.github.algafix"
-version = "0.2"
+version = "1.0.1"
 
 repositories {
     // Use Maven Central for resolving dependencies.
@@ -32,7 +31,7 @@ dependencies {
     implementation(libs.guava)
 
     // Aleix
-    implementation(libs.commons.net)
+    api(libs.commons.net)
     implementation(libs.conscrypt)
     implementation(libs.tink)
 }
@@ -42,8 +41,6 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
-    withJavadocJar()
-    withSourcesJar()
 }
 
 application {
@@ -54,46 +51,43 @@ application {
 tasks.named<Test>("test") {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
+    // Exclude all tests or make tests optional (we are not defining any @Test in the test classes)
+    filter {
+        failOnNoDiscoveredTests = false
+    }
 }
 
-publishing{
-    publications {
-        create<MavenPublication>("mavenJava"){
-            artifactId = "JavaNTSClient"
-            from(components["java"])
-            versionMapping{
-                usage("java-api"){
-                    fromResolutionOf("runtimeClasspath")
-                }
-                usage("java-runtime"){
-                    fromResolutionResult()
-                }
+mavenPublishing {
+    coordinates("io.github.algafix", "JavaNTSClient", version.toString())
+    pom {
+        name.set("Java NTS Client")
+        description.set("A Simple NTP client with Network Time Security (NTS) capability")
+        url.set("https://www.github.com/algafix/JavaNTSClient")
+        licenses {
+            license {
+                name.set("The Apache License, Version 2.0")
+                url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                distribution.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
             }
-            pom {
-                name = "Java NTS Client"
-                description = "A Simple NTP client with Network Time Security (NTS) capability"
-                url = "https://www.github.com/algafix/JavaNTSClient"
-                licenses {
-                    license {
-                        name = "The Apache License, Version 2.0"
-                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
-                    }
-                }
-                developers {
-                    developer {
-                        id = "algafix"
-                        name = "Aleix Galan"
-                    }
-                }
-                scm {
-                    connection = "scm:git:git://www.github.com/algafix/JavaNTSClient.git"
-
-                }
+        }
+        developers {
+            developer {
+                id.set("algafix")
+                name.set("Aleix Galan")
+                url.set("https://www.github.com/algafix")
             }
+            developer {
+                id.set("odrisci")
+                name.set("Cillian O'Driscoll")
+                url.set("https://github.com/odrisci")
+            }
+        }
+        scm {
+            url.set("https://www.github.com/algafix/JavaNTSClient")
+            connection.set("scm:git:git://www.github.com/algafix/JavaNTSClient.git")
+            developerConnection.set("scm:git:ssh://www.github.com/algafix/JavaNTSClient.git")
         }
     }
 }
 
-//signing {
-//    sign(publishing.publications["mavenJava"])
-//}
+
