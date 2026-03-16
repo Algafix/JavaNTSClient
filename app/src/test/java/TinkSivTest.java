@@ -5,47 +5,15 @@ import com.google.crypto.tink.daead.subtle.DeterministicAeads;
 import com.google.crypto.tink.subtle.AesSiv;
 import com.google.crypto.tink.subtle.Hex;
 import com.google.crypto.tink.util.SecretBytes;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 
 public class TinkSivTest {
 
-    public static void main(String[] args) throws Exception {
-        AesSivTest1();
-    }
-
-    public static void AesSivTest2() throws Exception {
-        AesSivParameters parameters =
-            AesSivParameters.builder()
-                .setKeySizeBytes(64)
-                .setVariant(AesSivParameters.Variant.NO_PREFIX)
-                .build();
-        SecretBytes keyBytes =
-            SecretBytes.copyFrom(
-                    Hex.decode("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
-                    + "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD"),
-                InsecureSecretKeyAccess.get());
-
-        AesSivKey key = AesSivKey.builder().setParameters(parameters).setKeyBytes(keyBytes).build();
-        byte[] plaintext = Hex.decode("Hello World");
-        byte[] aad = Hex.decode("FF");
-        byte[] ciphertext = Hex.decode("1BC49C6A894EF5744A0A01D46608CBCC");
-
-        DeterministicAeads daead = AesSiv.create(key);
-
-        byte[] encrypted_one_ad = daead.encryptDeterministically(plaintext, aad);
-        System.out.println("Encrypted: " + Hex.encode(encrypted_one_ad) + " expected: " + Hex.encode(ciphertext));
-        byte[] decrypted_one_ad = daead.decryptDeterministically(encrypted_one_ad, aad);
-        System.out.println("Decrypted: " + Hex.encode(decrypted_one_ad) + " expected: " + Hex.encode(plaintext));
-
-        // also test the DeterministicAeads interface
-        byte[] encrypted_multiple_aad = daead.encryptDeterministicallyWithAssociatedDatas(plaintext, new byte[][] {aad});
-        System.out.println("Encrypted with multiple AAD: " + Hex.encode(encrypted_multiple_aad) + " expected: " + Hex.encode(ciphertext));
-        byte[] decrypted_multiple_aad = daead.decryptDeterministicallyWithAssociatedDatas(encrypted_multiple_aad, new byte[][] {aad});
-        System.out.println("Decrypted with multiple AAD: " + Hex.encode(decrypted_multiple_aad) + " expected: " + Hex.encode(plaintext));
-    }
-
-
-    public static void AesSivTest1() throws Exception {
+    @Test
+    public void AesSivTest1() throws Exception {
         AesSivParameters parameters =
             AesSivParameters.builder()
                 .setKeySizeBytes(32)
@@ -82,6 +50,9 @@ public class TinkSivTest {
         System.out.println("Encrypted: " + Hex.encode(encrypted_multiple_aad));
         byte[] decrypted_multiple_aad = daead.decryptDeterministicallyWithAssociatedDatas(encrypted_multiple_aad, new byte[][] {aad, nonce});
         System.out.println("Decrypted: " + Hex.encode(decrypted_multiple_aad) + " expected: " + Hex.encode(plaintext));
+
+        assertArrayEquals(plaintext, decrypted_multiple_aad);
+
     }
 
 }
