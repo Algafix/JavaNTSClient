@@ -9,6 +9,10 @@ The library handles the TLS handshake, key extraction and cookie management inde
 
 The interface is compatible with and inspired by the [Apache Commons NTP library](https://commons.apache.org/proper/commons-net/apidocs/org/apache/commons/net/ntp/package-summary.html).
 
+## Maven Central
+
+You can import JavaNTSClient from the maven central repository: [io.github.algafix/JavaNTSClient](https://central.sonatype.com/artifact/io.github.algafix/JavaNTSClient)
+
 ## Attribution
 
 This library was developed by:
